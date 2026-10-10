@@ -32,16 +32,16 @@
 ## 三步分享
 
 1. **建立工作区**：注册并登录，创建工作区，把邀请码发给伙伴。
-2. **上传本次工作**：在 Codex 复制对话为 Markdown，回到共研点“分享 Markdown”，粘贴内容并选择工作目录。
+2. **上传本次工作**：在 Codex 复制对话为 Markdown，回到共研点“分享 Markdown”，粘贴内容与工作目录路径。
 3. **一起复核成果**：确认文件清单并发布。成员可阅读对话、复制消息、下载文件。
 
-网站通过系统目录选择器读取你选择的文件夹，不需要连接 Codex、提供 API Key 或安装本机助手。发布是手动操作；后续在 Codex 中完成工作，再分享新的快照。
+路径上传无需打开 Finder。首次使用时，在下载的项目目录运行 `npm ci`、`npm run directory`，保持本机读取服务开启；本机开发的 `npm run share` 已包含此服务。预览时会打开一个小窗口读取目录，再自动将文件返回上传页。浏览器本身无法凭路径读取本机磁盘，因此云端路径上传也需要此服务；无需连接配置、Codex 数据库或 API Key。留空可直接分享对话。
 
 ## 已经能做什么
 
 | 能力 | 当前行为 |
 | --- | --- |
-| 阅读 AI 对话 | 区分用户与 AI 消息，支持代码高亮、表格、公式、Mermaid 流程图和折叠工具记录 |
+| 阅读 AI 对话 | 区分用户与 AI 消息，支持代码高亮、表格、公式、Mermaid 流程图、折叠工具记录和 Codex 文件下载标记 |
 | 分享工作目录 | 上传普通成果文件及子目录，保留路径，支持同名文件和空文件 |
 | 验证文件完整性 | 服务端读回文件并核对 SHA-256；全部文件校验成功后才发布对话 |
 | 团队访问 | 账号登录、邀请码加入、工作区成员权限与私有文件存储 |
@@ -83,6 +83,7 @@ React 19 · TypeScript · Tailwind CSS · Streamdown · Shiki · KaTeX · Mermai
 ```sh
 npx tsc --noEmit --incremental false
 node --test tests/markdown-import.test.mjs tests/markdown-math.test.mjs tests/shared-transcript.test.mjs
+node --test tests/file-citations.test.mjs tests/directory-bridge.test.mjs
 npm run build:tencent
 node scripts/build-tencent-server.mjs
 ```

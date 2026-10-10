@@ -6,8 +6,9 @@ import { code } from "@streamdown/code";
 import { createMathPlugin } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
 import { cjk } from "@streamdown/cjk";
-import { FileText, Image as ImageIcon, ChevronRight } from "lucide-react";
+import { FileText, Download, Image as ImageIcon, ChevronRight } from "lucide-react";
 import { normalizeMathDelimiters } from "@/lib/markdown-math.mjs";
+import { normalizeCodexFileCitations } from "@/lib/file-citations.mjs";
 import {
   markdownSections,
   markdownMessageContext,
@@ -38,7 +39,8 @@ function attachmentFor(url: string, references: FileReference[]) {
   return references.find(
     (file) =>
       url === "/api/files/" + file.id ||
-      (file.path && normalizePath(url) === normalizePath(file.path)),
+      (file.path && normalizePath(url) === normalizePath(file.path)) ||
+      (!normalizePath(url).startsWith("/") && normalizePath(url) === normalizePath(file.name)),
   );
 }
 // Map known local destinations before rehype normalizes relative URLs. All
@@ -224,7 +226,7 @@ export const MarkdownBody = memo(function MarkdownBody({
   references?: FileReference[];
 }) {
   const renderedContent = useMemo(
-    () => normalizeMathDelimiters(content),
+    () => normalizeMathDelimiters(normalizeCodexFileCitations(content)),
     [content],
   );
   const remarkPlugins = useMemo(
@@ -244,23 +246,22 @@ export const MarkdownBody = memo(function MarkdownBody({
         href?: string;
         children?: React.ReactNode;
       }) => {
-        const file = references.find(
-          (file) =>
-            href === "/api/files/" + file.id ||
-            (file.path &&
-              normalizePath(href || "") === normalizePath(file.path)),
-        );
+        const file = attachmentFor(href || "", references);
         if (file)
           return (
             <a
               href={"/api/files/" + file.id}
-              className="conversation-file-link"
+              className="codex-output-file"
+              download={file.name.split("/").at(-1)}
+              aria-label={"下载 " + file.name.split("/").at(-1)}
             >
-              {children}
+              <FileText size={18} />
+              <span>{file.name.split("/").at(-1)}</span>
+              <Download size={16} />
             </a>
           );
         if (!href || !/^(?:https?:\/\/|#)/i.test(href))
-          return <span title="文件尚未上传">{children}</span>;
+          return <span className="codex-output-file unavailable"><FileText size={18} /><span>{children}<small>未找到文件</small></span></span>;
         return (
           <a
             href={href}
@@ -272,13 +273,7 @@ export const MarkdownBody = memo(function MarkdownBody({
         );
       },
       img: ({ src, alt }: { src?: string | Blob; alt?: string }) => {
-        const file = references.find(
-          (file) =>
-            src === "/api/files/" + file.id ||
-            (file.path &&
-              normalizePath(typeof src === "string" ? src : "") ===
-                normalizePath(file.path)),
-        );
+        const file = attachmentFor(typeof src === "string" ? src : "", references);
         return file ? (
           <AttachedImage file={file} alt={alt || ""} />
         ) : (

@@ -4,12 +4,13 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID, randomBytes, createHash } from "node:crypto";
 import { inspectMarkdownFiles, readApprovedFiles } from "./markdown-files.mjs";
+import { createDirectoryBridge, CLOUD_SITE } from "./directory-bridge.mjs";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 function option(name) { const at = args.indexOf(name); return at < 0 ? undefined : args[at + 1]; }
 for (let i = 0; i < args.length; i += 2) {
-  if (!["--workspace", "--port", "--site"].includes(args[i]) || !args[i + 1]) throw new Error("只支持 --workspace、--port、--site 参数。");
+  if (!["--workspace", "--port", "--site", "--allow-origin"].includes(args[i]) || !args[i + 1]) throw new Error("只支持 --workspace、--port、--site、--allow-origin 参数。");
 }
 const workspaceRoot = resolve(option("--workspace") || process.cwd());
 const workspaceSite = new URL(option("--site") || "http://127.0.0.1:5173");
@@ -40,10 +41,18 @@ function send(response, status, data) {
   response.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
   response.end(JSON.stringify(data));
 }
+const allowedOrigins = new Set([workspaceSite.origin, CLOUD_SITE]);
+if (option("--allow-origin")) {
+  const allowed = new URL(option("--allow-origin"));
+  if (allowed.protocol !== "https:" || allowed.username || allowed.password || allowed.pathname !== "/" || allowed.search || allowed.hash) throw new Error("额外授权网站必须是 HTTPS 网站的根地址。");
+  allowedOrigins.add(allowed.origin);
+}
+const directoryBridge = createDirectoryBridge({ directory: new URL("./", import.meta.url), nonce, allowedOrigins, bytes, send });
 const server = createServer(async (request, response) => {
   try {
     if (request.headers.host !== new URL(siteOrigin).host) throw new Error("请使用本机面板地址。");
     const url = new URL(request.url, siteOrigin);
+    if (request.method === "GET" && url.pathname === "/directory") { await directoryBridge(request, response, url); return; }
     if (request.method === "GET" && url.pathname === "/") {
       const html = (await readFile(resolve(directory, "markdown-panel.html"), "utf8")).replace("__PANEL_NONCE__", nonce);
       response.writeHead(200, {
@@ -53,6 +62,7 @@ const server = createServer(async (request, response) => {
       }); response.end(html); return;
     }
     if (request.headers["x-gongyan-panel"] !== nonce || request.headers.origin && request.headers.origin !== siteOrigin) throw new Error("请在上传面板中操作。");
+    if (await directoryBridge(request, response, url)) return;
     if (request.method === "GET" && url.pathname === "/status") {
       try {
         const data = await workspaceApi(request, "projects");

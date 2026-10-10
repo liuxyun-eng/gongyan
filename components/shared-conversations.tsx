@@ -136,7 +136,7 @@ export function SharedConversations({
   const attached = files.filter((file) => file.post_id === selected?.id);
   const references = messages[0]?.references || [];
   const shareUrl =
-    (browserUpload ? "/share?project=" : "http://127.0.0.1:6062/?project=") + encodeURIComponent(projectId);
+    "/share?project=" + encodeURIComponent(projectId);
   async function deleteMessage() {
     if (!deletion || deleting) return;
     setDeleting(true); setDeleteError("");

@@ -1,4 +1,5 @@
 import { fromMarkdown } from "mdast-util-from-markdown";
+import { codexFileCitations } from "./file-citations.mjs";
 // Shared by the local companion, Worker API and browser. Never execute Markdown.
 const USER = /^(user|human|you|用户|我|提问)$/i;
 const ROLE =
@@ -315,6 +316,7 @@ export function markdownFileReferences(markdown) {
       node.alt || node.children?.map((child) => child.value || "").join(""),
     );
   });
+  for (const citation of codexFileCitations(markdown)) add(citation.path, citation.name);
   const native = codexExport(markdown);
   if (native)
     for (const message of native.messages.filter(

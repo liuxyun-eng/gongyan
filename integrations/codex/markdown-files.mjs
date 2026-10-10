@@ -52,10 +52,17 @@ async function readRegular(root, path) {
 export async function inspectMarkdownFiles(markdown, requestedRoot) {
   const conversation = parseMarkdownConversation(markdown);
   if (typeof requestedRoot !== "string" || !isAbsolute(requestedRoot) || requestedRoot.length > 2000) throw new Error("请填写完整的本机工作目录路径。");
-  const root = await realpath(requestedRoot);
+  let root;
+  try { root = await realpath(requestedRoot.trim()); }
+  catch (error) { if (["ENOENT", "ENOTDIR"].includes(error.code)) throw new Error("未找到文件：工作目录不存在，请检查路径。"); throw error; }
   if (excluded(root) || root === "/" || !(await stat(root)).isDirectory()) throw new Error("请选择成果所在的工作目录。");
+  const requestedPath = resolve(requestedRoot.trim());
   const { paths, skipped } = await inventory(root);
   const links = markdownFileReferences(conversation.markdown);
+  function destination(link) {
+    const path = resolve(requestedPath, link.path);
+    return inside(requestedPath, path) ? resolve(root, relative(requestedPath, path)) : path;
+  }
   const candidates = [], originals = new Map();
   let total = 0;
   for (const item of paths) {
@@ -63,12 +70,12 @@ export async function inspectMarkdownFiles(markdown, requestedRoot) {
     try { bytes = await readRegular(root, item.path); } catch (error) { throw new Error(item.name + "：" + error.message + " 本次分享尚未上传任何文件。"); }
     total += bytes.length;
     if (total > MAX_TOTAL) throw new Error("目录总量超过 200 MB，请选择较小的成果目录。本次分享尚未上传任何文件。");
-    const reference = links.find(link => resolve(root, link.path) === item.path)?.path || "./" + item.name;
+    const reference = links.find(link => isAbsolute(link.path) && destination(link) === item.path)?.path || resolve(requestedPath, item.name);
     const file = { id: randomUUID(), name: item.name, size: bytes.length, hash: digest(bytes), reference, path: item.path };
     originals.set(file.id, file);
     candidates.push({ id: file.id, name: file.name, size: file.size, reference, status: "ready", selected: true, detail: "" });
   }
-  const missingReferences = links.filter(link => !paths.some(item => resolve(root, link.path) === item.path)).map(link => link.path);
+  const missingReferences = links.filter(link => !paths.some(item => destination(link) === item.path)).map(link => link.path);
   return { conversation, root, candidates, originals, skipped, missingReferences, total };
 }
 export async function readApprovedFiles(snapshot, fileIds) {

@@ -295,6 +295,25 @@
   border: 1px solid #e8e8e8;
   border-radius: 10px;
 }
+.codex-output-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e7e7e7;
+  border-radius: 10px;
+  background: #fafafa;
+  color: #353535 !important;
+  font-size: 14px;
+  text-decoration: none !important;
+  vertical-align: middle;
+}
+.codex-output-file svg { flex-shrink: 0; color: #888; }
+.codex-output-file span { min-width: 0; overflow-wrap: anywhere; }
+.codex-output-file:hover { background: #f1f1f1; }
+.codex-output-file.unavailable { color: #777 !important; }
+.codex-output-file small { display: block; color: #999; font-size: 12px; }
 .codex-context-file svg {
   flex-shrink: 0;
   color: #999;

@@ -767,7 +767,7 @@ export default function Workspace({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem asChild>
-                            <a href={"http://127.0.0.1:6062/?project=" + encodeURIComponent(projectId)} target="_blank" rel="noopener noreferrer">
+                            <a href={"/share?project=" + encodeURIComponent(projectId)} target="_blank" rel="noopener noreferrer">
                               上传 Markdown 与工作目录
                             </a>
                           </DropdownMenuItem>

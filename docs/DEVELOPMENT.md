@@ -8,13 +8,15 @@
 
 1. 在同一浏览器登录共研，创建或加入工作区。
 2. 点“分享 Markdown”，自动带上当前工作区。
-3. 粘贴或选择 `.md`，点击“选择目录”，在系统窗口选择本机工作目录。
+3. 粘贴或选择 `.md`，在“目录路径”直接粘贴完整路径，无需打开 Finder。留空可只分享对话。
 4. 页面读取目录及子目录，列出完整文件清单；确认后点“分享对话与全部文件”。
 5. 只有全部文件保存并校验成功才发布对话，成员可阅读并下载。
 
 只支持提供 Markdown 和工作目录，不访问 Codex 对话数据库，也不需要连接文件、JSON 凭证或会话绑定。
 
-本机开发时也可打开 `http://127.0.0.1:6062/`，使用路径形式的本机上传助手。云端网站使用浏览器目录选择器，无需安装这个助手。
+在下载的源码目录运行 `npm ci`、`npm run directory` 并保持服务开启，云端上传页即可读取粘贴的路径。本机开发的 `npm run share` 已包含这个服务，不必重复启动。预览时网页打开 `http://127.0.0.1:6062/directory` 小窗口，读取完整清单后自动返回上传页；文件只在点击分享后上传云端。浏览器禁止纯网页直接读取路径，服务仅监听本机地址，不需要配置文件、云端密钥或 Codex 连接。
+
+不存在的目录、空目录与缺失的 Markdown 附件引用都会显示“未找到文件”。目录不存在时阻止分享；空目录或缺少引用时可分享对话及目录内其他实际文件。其他人的电脑要读取自己的目录，也需要运行本机服务。
 
 ## 完整目录上传
 
@@ -35,6 +37,8 @@
 支持 Codex 原生“复制为 Markdown”的引用式用户消息、普通回答、折叠的工具记录、上下文图片与文件路径；同时支持 `## User` / `## Assistant` 等角色标记。用户消息呈现为右侧气泡，工具记录默认折叠。缺少角色结构时明确按一段回答展示。
 
 渲染使用 Streamdown、Shiki、KaTeX、Mermaid、CJK。公式支持 `$...$`、`$$...$$`、`\(...\)` 和 `\[...\]`。后两种只在显示时适配，删除之前保留原始导出内容。Markdown 内的 HTML 与命令不会执行，不下载远程文件或自动加载远程图片。本地链接映射到上传附件，目录之外的引用不会自动读取。
+
+原生 `:codex-file-citation{path="..." purpose="output"}` 在展示时变成文件名下载卡片，不显示电脑绝对路径；只有实际上传的匹配文件可下载，否则显示“未找到文件”。标记在代码块和内联代码中仍是原始示例。原始导出内容在删除前保持不变。
 
 ## 启动
 
@@ -58,7 +62,7 @@ npm run share
 node integrations/codex/upload-panel.mjs --port 6062 --workspace /完整/成果目录
 ```
 
-助手只支持 `--port`、`--workspace`、`--site` 三个参数。默认工作区为 `http://127.0.0.1:5173/`；其他本机端口通过 `--site` 指定。网页填写的目录是此次上传范围。独立安装 `gongyan-upload-skill.zip` 时在技能目录执行 `npm install`。
+助手支持 `--port`、`--workspace`、`--site`、`--allow-origin`。默认工作区为 `http://127.0.0.1:5173/`；其他本机端口通过 `--site` 指定。网页填写的目录是此次上传范围。读取窗口默认只向本机工作区与本项目腾讯云网址返回文件；自行部署的新域名可通过 `npm run directory -- --allow-origin https://你的域名` 明确授权。窗口校验发送方地址与窗口身份，文件 API 验证本机 Host、Origin 与随机页面标识，不开放跨网站磁盘读取。
 
 首次空数据库先构建并依次应用迁移；已应用的历史迁移不要修改或重复执行：
 
@@ -76,6 +80,7 @@ node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1
 ```sh
 node node_modules/typescript/bin/tsc --noEmit
 node --test tests/markdown-import.test.mjs tests/markdown-math.test.mjs tests/shared-transcript.test.mjs
+node --test tests/file-citations.test.mjs tests/directory-bridge.test.mjs
 node tests/dev-upload.integration.mjs
 node scripts/seed-markdown-demo.mjs
 node scripts/seed-codex-export-demo.mjs
@@ -89,6 +94,8 @@ node scripts/seed-codex-export-demo.mjs
 
 - `integrations/codex/markdown-panel.html`、`upload-panel.mjs`：本机上传页面、冻结提交和失败重试。
 - `integrations/codex/markdown-files.mjs`：完整目录扫描和文件完整性检查。
+- `integrations/codex/directory-bridge.mjs`、`directory-panel.html`、`lib/local-directory-client.ts`：云端网页与本机路径读取窗口之间的文件传递。
+- `integrations/codex/file-citations.mjs`：Codex 文件标记解析及下载卡片适配。
 - `lib/markdown-share.ts`：逐文件持久化校验、完整清单确认与幂等发布。
 - `lib/shared-transcript.mjs`：已有导出还原及删除后的 Markdown 生成。
 - `components/shared-conversations.tsx`：只读共享页、复制、逐段删除与卡片右键删除。

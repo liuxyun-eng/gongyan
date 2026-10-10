@@ -1,18 +1,18 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Layers, FolderOpen, ArrowLeft, Check } from "lucide-react";
+import { Layers, ArrowLeft, Check } from "lucide-react";
 import { parseMarkdownConversation, markdownFileReferences } from "@/lib/markdown-conversation.mjs";
-import { inspectBrowserDirectory } from "@/lib/directory-policy.mjs";
+import { readLocalDirectory } from "@/lib/local-directory-client";
 type PreparedFile = { id: string; name: string; reference: string; size: number; sha256: string; bytes: Uint8Array };
-type Snapshot = { markdown: string; title: string; requestId: string; files: PreparedFile[]; skipped: string[]; messages: number; total: number; projectId: string };
+type Snapshot = { markdown: string; title: string; requestId: string; files: PreparedFile[]; skipped: string[]; missingReferences: string[]; messages: number; total: number; projectId: string };
 type UploadReceipt = { error?: string; verified?: boolean; sha256?: string; size?: number; files?: unknown[]; postId?: string; transport?: string; ticket?: string; chunkSize?: number; index?: number };
 const size = (n: number) => n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : (n / 1024).toFixed(1) + " KB";
 export default function Share() {
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([]), [projectId, setProjectId] = useState("");
-  const [markdown, setMarkdown] = useState(""), [files, setFiles] = useState<File[]>([]), [folder, setFolder] = useState("");
+  const [markdown, setMarkdown] = useState(""), [folder, setFolder] = useState("");
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null), [error, setError] = useState(""), [busy, setBusy] = useState(false), [phase, setPhase] = useState("");
   const [done, setDone] = useState(0), [success, setSuccess] = useState("");
-  const uploaded = useRef(new Set<string>()), folderInput = useRef<HTMLInputElement>(null), markdownInput = useRef<HTMLInputElement>(null);
+  const uploaded = useRef(new Set<string>()), markdownInput = useRef<HTMLInputElement>(null);
   useEffect(() => { fetch("/api/projects").then(async r => { const result = await r.json() as { error?: string; projects: { id: string; name: string }[] }; if (!r.ok) throw new Error(result.error); setProjects(result.projects); const requested = new URLSearchParams(window.location.search).get("project"); setProjectId(result.projects.find(p => p.id === requested)?.id || result.projects[0]?.id || ""); }).catch(e => setError(e.message)); }, []);
   function reset() { setSnapshot(null); setError(""); setSuccess(""); setDone(0); uploaded.current.clear(); }
   async function preview() {
@@ -20,19 +20,10 @@ export default function Share() {
     try {
       if (!projectId) throw new Error("请先创建或加入一个工作区。");
       const parsed = parseMarkdownConversation(markdown);
-      const inventory = inspectBrowserDirectory(files);
-      const references = markdownFileReferences(parsed.markdown);
-      const prepared: PreparedFile[] = [];
-      for (const [index, item] of inventory.included.entries()) {
-        setPhase(`正在校验文件 ${index + 1}/${inventory.included.length}`);
-        let bytes: Uint8Array;
-        try { bytes = new Uint8Array(await item.file.arrayBuffer()); } catch { throw new Error("无法读取文件：" + item.name + "。请重新选择目录。"); }
-        if (bytes.byteLength !== item.file.size) throw new Error("文件已变化：" + item.name + "。请重新选择目录。");
-        const sha256 = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes as Uint8Array<ArrayBuffer>)), b => b.toString(16).padStart(2, "0")).join("");
-        const reference = references.find((ref: { path: string }) => ref.path === item.name || ref.path.endsWith("/" + item.name))?.path || "./" + item.name;
-        prepared.push({ id: crypto.randomUUID(), name: item.name, reference, size: bytes.byteLength, sha256, bytes });
-      }
-      setSnapshot({ projectId, markdown: parsed.markdown, title: parsed.title, requestId: crypto.randomUUID(), files: prepared, skipped: inventory.excluded, messages: parsed.messages.length, total: inventory.total }); setDone(0);
+      const root = folder.trim().replace(/^(["'])(.*)\1$/, "$2");
+      if (root && !root.startsWith("/")) throw new Error("请粘贴完整的本机工作目录路径。");
+      const inventory = root ? await readLocalDirectory(root, parsed.markdown) : { files: [], skipped: [], missingReferences: markdownFileReferences(parsed.markdown).map(file => file.path), total: 0 };
+      setSnapshot({ projectId, markdown: parsed.markdown, title: parsed.title, requestId: crypto.randomUUID(), files: inventory.files, skipped: inventory.skipped, missingReferences: inventory.missingReferences, messages: parsed.messages.length, total: inventory.total }); setDone(0);
     } catch (error) { setError((error as Error).message); setSnapshot(null); }
     finally { setBusy(false); setPhase(""); }
   }
@@ -98,17 +89,18 @@ export default function Share() {
   }
   return <main className="simple-page"><section className="simple-card">
     <div className="simple-toolbar"><a className="simple-brand" href="/"><Layers size={23} />共研</a><a href="/" className="simple-link"><ArrowLeft size={14} style={{ display: "inline", marginRight: 6 }} />返回工作区</a></div>
-    <h1>分享 Codex 对话</h1><p>粘贴 Markdown，选择工作目录，一起分享给伙伴。</p>
+    <h1>分享 Codex 对话</h1><p>粘贴 Markdown 和工作目录路径，一起分享给伙伴。</p>
     <label>分享到工作区<select value={projectId} disabled={busy} onChange={e => { reset(); setProjectId(e.target.value); }}>{projects.map(p => <option value={p.id} key={p.id}>{p.name}</option>)}</select></label>
     {!projects.length && <p>还没有工作区，<a href="/">先创建或加入</a>。</p>}
     <label>Codex 对话 · Markdown<textarea rows={10} value={markdown} disabled={busy} onChange={e => { reset(); setMarkdown(e.target.value); }} placeholder="在 Codex 中复制对话为 Markdown，然后粘贴到这里。" /></label>
     <input hidden ref={markdownInput} type="file" accept=".md,.markdown,text/markdown" onChange={async e => { const file = e.target.files?.[0]; if (!file) return; if (file.size > 400000) { setError("Markdown 超过 400 KB。"); return; } reset(); setMarkdown(await file.text()); }} />
     <button className="simple-link" disabled={busy} onClick={() => markdownInput.current?.click()}>选择 .md 文件</button>
-    <section className="simple-section"><div className="simple-toolbar"><strong>本机工作目录</strong><button className="simple-folder" disabled={busy} onClick={() => folderInput.current?.click()}><FolderOpen size={16} style={{ marginRight: 8 }} />{folder ? "重新选择目录" : "选择目录"}</button></div>
-      <input ref={folderInput} hidden type="file" {...{ webkitdirectory: "", directory: "" }} multiple onChange={e => { reset(); const selected = Array.from(e.target.files || []); setFiles(selected); setFolder(selected[0]?.webkitRelativePath.split("/")[0] || ""); }} />
-      <p>{folder ? "已选择：" + folder : "可只分享对话。需要文件时选择目录，包含其子目录。"}<br />最多 500 个文件 · 单文件 20 MB · 总量 200 MB。凭证、系统文件和依赖目录会排除，并列出清单。</p>
+    <section className="simple-section"><strong>本机工作目录</strong>
+      <label>目录路径<input value={folder} disabled={busy} onChange={e => { reset(); setFolder(e.target.value); }} autoComplete="off" spellCheck={false} placeholder="例如 /Users/你的名字/Documents/项目" /></label>
+      <p>直接粘贴路径，无需打开 Finder。留空可只分享对话。<br />最多 500 个文件 · 单文件 20 MB · 总量 200 MB。凭证、系统文件和依赖目录会排除。</p>
+      <details className="simple-directory-help"><summary>第一次使用路径上传？</summary><p>在项目目录运行 <code>npm run directory</code>，保持本机读取服务开启，然后点击“预览对话和文件”。无需连接配置或 API Key。<br />读取窗口会自动返回文件清单；只有点击分享后才上传到工作区。</p></details>
     </section>
-    {snapshot && <section className="simple-section"><strong>{snapshot.title}</strong><p>{snapshot.messages} 条消息 · {snapshot.files.length} 个文件 · {size(snapshot.total)}</p><ul className="simple-file-list">{snapshot.files.map(f => <li key={f.id}><span><Check size={13} style={{ display: "inline", color: "#238361", marginRight: 8 }} />{f.name}</span><small>{size(f.size)}</small></li>)}</ul>{snapshot.skipped.length > 0 && <details><summary>已排除 {snapshot.skipped.length} 项</summary><ul className="simple-file-list">{snapshot.skipped.map(name => <li key={name}>{name}</li>)}</ul></details>}</section>}
+    {snapshot && <section className="simple-section"><strong>{snapshot.title}</strong><p>{snapshot.messages} 条消息 · {snapshot.files.length} 个文件 · {size(snapshot.total)}</p>{!snapshot.files.length && folder.trim() && <p>未找到文件：目录为空或没有可上传的成果文件。</p>}<ul className="simple-file-list">{snapshot.files.map(f => <li key={f.id}><span><Check size={13} style={{ display: "inline", color: "#238361", marginRight: 8 }} />{f.name}</span><small>{size(f.size)}</small></li>)}</ul>{snapshot.missingReferences.length > 0 && <p>未找到文件：{snapshot.missingReferences.map(path => path.split("/").at(-1)).join("、")}</p>}{snapshot.skipped.length > 0 && <details><summary>已排除 {snapshot.skipped.length} 项</summary><ul className="simple-file-list">{snapshot.skipped.map(name => <li key={name}>{name}</li>)}</ul></details>}</section>}
     {busy && <p aria-live="polite">{phase}</p>}
     {snapshot && busy && <progress className="simple-progress" max={Math.max(1, snapshot.files.length)} value={done} />}
     {error && <p className="simple-error" role="alert">{error}</p>}{success && <p className="simple-success">{success}</p>}

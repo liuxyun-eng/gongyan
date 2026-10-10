@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>共研 · 读取本机目录</title>
+<style>body{font:15px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#292929;background:#fafafa;margin:0;padding:32px}main{max-width:480px;margin:auto}h1{font-size:21px;margin:0 0 14px}p{color:#777;overflow-wrap:anywhere}button{font:inherit;border:1px solid #ddd;border-radius:8px;padding:9px 18px;background:#fff;cursor:pointer}#error{color:#b44432}small{color:#999}</style></head>
+<body><main><h1>读取本机工作目录</h1><p id="path"></p><p id="status" role="status">正在等待上传页…</p><p id="error" role="alert"></p><button id="close">取消读取</button><p><small>只读取你填写的目录。文件会返回共研上传页，发布前仍可检查清单。</small></p></main>
+<script nonce="__PANEL_NONCE__">
+const expectedOrigin = __OPENER_ORIGIN__;
+const nonce = document.currentScript.nonce;
+const openerWindow = window.opener;
+const $ = id => document.getElementById(id);
+let used = false, cancelled = false, snapshotId;
+const controller = new AbortController();
+async function api(path, body) {
+  const response = await fetch(path, { method: body ? 'POST' : 'GET', headers: { 'x-gongyan-panel': nonce, ...(body ? {'Content-Type':'application/json'} : {}) }, body: body ? JSON.stringify(body) : undefined, signal: controller.signal });
+  if (!response.ok) { const result = await response.json(); throw new Error(result.error || '无法读取目录。'); }
+  return response;
+}
+function notify(value, transfer = []) { if (openerWindow && !cancelled) openerWindow.postMessage(value, expectedOrigin, transfer); }
+window.addEventListener('message', async event => {
+  if (used || event.source !== openerWindow || event.origin !== expectedOrigin || event.data?.type !== 'gongyan:directory-request' || typeof event.data.requestId !== 'string') return;
+  used = true;
+  const requestId = event.data.requestId;
+  $('path').textContent = event.data.root;
+  $('status').textContent = '正在读取并校验目录文件…';
+  try {
+    const result = await (await api('/directory/read', { root: event.data.root, markdown: event.data.markdown })).json();
+    snapshotId = result.snapshotId;
+    const files = [];
+    for (const [index, file] of result.files.entries()) {
+      $('status').textContent = `正在准备文件 ${index + 1}/${result.files.length}：${file.name}`;
+      const bytes = await (await api('/directory/file?snapshotId=' + encodeURIComponent(snapshotId) + '&id=' + encodeURIComponent(file.id))).arrayBuffer();
+      const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), b => b.toString(16).padStart(2,'0')).join('');
+      if (bytes.byteLength !== file.size || hash !== file.sha256) throw new Error('文件校验失败：' + file.name);
+      files.push({ ...file, bytes });
+    }
+    await api('/directory/release?snapshotId=' + encodeURIComponent(snapshotId), {}); snapshotId = undefined;
+    notify({ type: 'gongyan:directory-result', requestId, files, skipped: result.skipped, missingReferences: result.missingReferences, total: result.total }, files.map(file => file.bytes));
+    $('status').textContent = '文件已返回上传页，请检查清单后发布。';
+    $('close').textContent = '关闭窗口';
+    window.close();
+  } catch (error) {
+    if (cancelled) return;
+    $('error').textContent = error.message;
+    $('status').textContent = '没有上传文件。请返回上传页修改路径后重试。';
+    notify({ type: 'gongyan:directory-error', requestId, error: error.message });
+    $('close').textContent = '关闭窗口';
+    if (snapshotId) void api('/directory/release?snapshotId=' + encodeURIComponent(snapshotId), {}).catch(() => {});
+  }
+});
+$('close').onclick = () => { cancelled = true; controller.abort(); window.close(); };
+window.addEventListener('pagehide', () => {
+  if (snapshotId) void fetch('/directory/release?snapshotId=' + encodeURIComponent(snapshotId), { method: 'POST', headers: {'x-gongyan-panel':nonce,'Content-Type':'application/json'}, body:'{}', keepalive:true }).catch(() => {});
+});
+if (!openerWindow) { $('error').textContent = '请从共研上传页打开这个窗口。'; }
+else notify({ type: 'gongyan:directory-ready' });
+</script></body></html>

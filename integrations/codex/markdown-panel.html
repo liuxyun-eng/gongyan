@@ -345,7 +345,7 @@
             未找到角色标记，将按一段 Codex 回答展示。原始 Markdown 会保留。
           </p>
           <div id="file-list"></div>
-          <p id="no-files" hidden>工作目录为空，此次只分享对话。</p>
+          <p id="no-files" hidden>未找到文件：目录为空或没有可上传的成果文件，此次只分享对话。</p>
           <p id="missing-note" class="description" hidden></p>
           <details id="skipped-details" hidden><summary id="skipped-count"></summary><p id="skipped-list"></p></details>
         </div>
@@ -450,8 +450,8 @@
             name.textContent = file.name;
             detail.textContent =
               file.status === "ready"
-                ? formatSize(file.size) + " · " + file.reference
-                : file.detail + " · " + file.reference;
+                ? formatSize(file.size)
+                : file.detail;
             content.append(name, detail);
             label.append(check, content);
             $("file-list").append(label);
@@ -461,7 +461,7 @@
           $("skipped-count").textContent = "已排除 " + (result.skipped?.length || 0) + " 项凭证、系统文件或依赖目录";
           $("skipped-list").textContent = (result.skipped || []).map(f => f.name).join("、");
           $("missing-note").hidden = !result.missingReferences?.length;
-          $("missing-note").textContent = "Markdown 中还有 " + (result.missingReferences?.length || 0) + " 处引用未在此目录找到；该目录中的文件仍会全部上传。";
+          $("missing-note").textContent = "未找到文件：" + (result.missingReferences || []).map(path => path.split("/").pop()).join("、") + "。目录中的其他文件仍会全部上传。";
           $("preview").hidden = false;
           $("activity").textContent = "";
           updateButton();
