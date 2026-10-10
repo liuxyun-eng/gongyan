@@ -1,0 +1,11 @@
+{
+  "name": "gongyan-local-sharing",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "mdast-util-from-markdown": "^2.0.2"
+  }
+}

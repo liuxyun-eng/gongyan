@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96" role="img" aria-label="共研">
+  <rect width="96" height="96" rx="25" fill="#e9f3ed"/>
+  <g stroke="#208454" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M23 35 48 22 73 35 48 48Z"/>
+    <path d="m23 46 25 13 25-13M23 57l25 13 25-13"/>
+  </g>
+</svg>

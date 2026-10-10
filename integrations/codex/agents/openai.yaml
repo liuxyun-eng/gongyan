@@ -1,0 +1,7 @@
+interface:
+  display_name: "分享 Codex Markdown"
+  short_description: "上传 Markdown 与工作目录，校验文件后发布"
+  brand_color: "#303730"
+  default_prompt: "请使用 $gongyan-upload 在当前 Codex 对话旁打开 Markdown 分享入口。"
+policy:
+  allow_implicit_invocation: false

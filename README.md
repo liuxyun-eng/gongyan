@@ -1,101 +1,110 @@
-# 共研 · Markdown 与工作目录共享
+<p align="center">
+  <img src="docs/media/gongyan.svg" width="76" height="76" alt="共研标志" />
+</p>
 
-面向课题组、电子设计和课程项目。上传 Codex 对话的 Markdown 与本机工作目录，组员在只读页面阅读对话、代码、表格、公式与流程图，并下载成果文件。Markdown 解析和展示不调用模型。
+<h1 align="center">共研 · Gongyan</h1>
 
-已部署到腾讯云上海：[打开共研](https://gongyan-d6gqg5jl234d901e6-1503317224.ap-shanghai.app.tcloudbase.com/)。登录、成员邀请、共享对话和私有文件存储由云端后端提供，异地成员使用同一网址。免费试用至 2027-04-10；没有购买或升级套餐，自动续费和超额使用关闭。默认域名供测试，正式推广需按腾讯云要求绑定自有域名。
+<p align="center"><strong>把 AI 对话和成果文件，一起交给伙伴。</strong><br />Share the conversation. Share the work.</p>
 
-## 使用
+<p align="center">
+  面向课题组、电子设计与课程项目的轻量共享工作区。<br />
+  继续在 Codex 中工作，上传 Markdown 与工作目录，让团队读懂你的过程、拿到你的成果。
+</p>
 
-1. 在同一浏览器登录共研，创建或加入工作区。
-2. 点“分享 Markdown”，自动带上当前工作区。
-3. 粘贴或选择 `.md`，点击“选择目录”，在系统窗口选择本机工作目录。
-4. 页面读取目录及子目录，列出完整文件清单；确认后点“分享对话与全部文件”。
-5. 只有全部文件保存并校验成功才发布对话，成员可阅读并下载。
+<p align="center">
+  <a href="https://gongyan-d6gqg5jl234d901e6-1503317224.ap-shanghai.app.tcloudbase.com/">体验早期版本</a> ·
+  <a href="#三步分享">使用方法</a> ·
+  <a href="docs/DEVELOPMENT.md">开发指南</a> ·
+  <a href="tencent/README.md">部署指南</a> ·
+  <a href="https://github.com/liuxyun-eng/gongyan/issues">反馈建议</a>
+</p>
 
-只支持提供 Markdown 和工作目录，不访问 Codex 对话数据库，也不需要连接文件、JSON 凭证或会话绑定。
+> **v0.1 · 早期预览**：已支持登录、工作区邀请、对话共享与目录上传。示例和截图均使用合成测试资料；仓库不包含用户上传的对话、附件、数据库或部署凭证。项目独立开发，与 OpenAI 无官方关联。
 
-本机开发时也可打开 `http://127.0.0.1:6062/`，使用路径形式的本机上传助手。云端网站使用浏览器目录选择器，无需安装这个助手。
+![共研共享对话：合成温度传感器标定示例](docs/media/conversation.png)
 
-## 完整目录上传
+## 为什么做共研
 
-目录中的所有普通成果文件都会上传，包括 Markdown 没有链接到的文件、子目录、不同目录中的同名文件和空文件。保留相对路径。`.env`、密钥、系统文件和 `node_modules` 等依赖目录会排除，页面明确列出；不会静默略过无法读取的成果文件。符号链接、读取权限不足、过大文件及超过数量限制会阻止预览，要求调整目录后重试。
+你用 AI 整理了一份实验方案、写了一段分析代码，或者完成了课程项目。把最后一段回答发到群里，伙伴仍然不知道：问题怎么提出、结论怎么得到、文件在哪里。
 
-当前原型每次最多 500 个文件，单文件 20 MB，目录总量 200 MB；超过限制会明确报错，不显示部分成功。Markdown 最多 400 KB、200 条消息，每条 20,000 字符。
+共研把一次 AI 工作保存为可阅读、可下载的共享快照。对话和文件留在同一个工作区，伙伴可以复核过程，再拿着成果继续工作。
 
-发布前复核完整清单及散列并冻结文件字节。逐文件上传，服务端读取保存后的内容校验 SHA-256。失败自动重试三次，仍失败时保留进程内快照及已确认文件，用户可再次点击重试；不重复发送已确认文件。全部存储回执确认后，在同一个数据库事务中发布对话与文件记录，提交标识防止丢失响应后重试产生重复记录。快照保留最多两小时，重启本机助手后需重新预览。未完成的文件暂存于附件存储，尚未提供自动清理策略。
+## 三步分享
 
-## 删除对话
+1. **建立工作区**：注册并登录，创建工作区，把邀请码发给伙伴。
+2. **上传本次工作**：在 Codex 复制对话为 Markdown，回到共研点“分享 Markdown”，粘贴内容并选择工作目录。
+3. **一起复核成果**：确认文件清单并发布。成员可阅读对话、复制消息、下载文件。
 
-每段用户消息和回答都有复制入口，发布者和工作区创建者还能删除单段消息。删除时只移除选中内容，重新生成导出的 Markdown 和摘要，保留其他消息与全部附件。删除全部消息后显示空对话，文件仍可下载。校验版本防止多人同时操作或旧页面误删下一条消息。普通成员可以阅读和复制，不能修改他人的分享。
+网站通过系统目录选择器读取你选择的文件夹，不需要连接 Codex、提供 API Key 或安装本机助手。发布是手动操作；后续在 Codex 中完成工作，再分享新的快照。
 
-右击自己上传的对话卡片，选择“删除共享对话”，确认后整条记录从列表移除。其他人的卡片不提供此入口，服务端也只允许发布者删除整条对话。已上传文件解除对话关联，仍保留在工作区“文件”中。删除校验版本，并保留不含对话正文的提交回执标记，阻止旧上传请求重试时重新发布已删除的内容。
+## 已经能做什么
 
-## 对话还原
+| 能力 | 当前行为 |
+| --- | --- |
+| 阅读 AI 对话 | 区分用户与 AI 消息，支持代码高亮、表格、公式、Mermaid 流程图和折叠工具记录 |
+| 分享工作目录 | 上传普通成果文件及子目录，保留路径，支持同名文件和空文件 |
+| 验证文件完整性 | 服务端读回文件并核对 SHA-256；全部文件校验成功后才发布对话 |
+| 团队访问 | 账号登录、邀请码加入、工作区成员权限与私有文件存储 |
+| 整理共享内容 | 复制消息；有权限的用户删除单段；作者右击卡片删除整条分享，文件保留在工作区 |
+| 自行部署 | 提供前端、后端、数据库迁移及腾讯云部署脚本 |
 
-支持 Codex 原生“复制为 Markdown”的引用式用户消息、普通回答、折叠的工具记录、上下文图片与文件路径；同时支持 `## User` / `## Assistant` 等角色标记。用户消息呈现为右侧气泡，工具记录默认折叠。缺少角色结构时明确按一段回答展示。
+Markdown 解析和展示不调用模型，也不会执行其中的 HTML 或命令。敏感凭证、系统文件与依赖目录会排除，并在上传清单中说明。
 
-渲染使用 Streamdown、Shiki、KaTeX、Mermaid、CJK。公式支持 `$...$`、`$$...$$`、`\(...\)` 和 `\[...\]`。后两种只在显示时适配，删除之前保留原始导出内容。Markdown 内的 HTML 与命令不会执行，不下载远程文件或自动加载远程图片。本地链接映射到上传附件，目录之外的引用不会自动读取。
+<details>
+<summary>查看目录上传与附件下载示例</summary>
 
-## 启动
+![合成验收资料：子目录、空文件与 20 MB 文件](docs/media/verified-upload.png)
 
-使用 Node.js 22.13+：
+此图来自合成测试工作区，展示已上传附件，未使用用户研究资料。
 
-从 GitHub 首次下载时，先创建本机开发配置；已有 `.openai/hosting.json` 的电脑不要覆盖它。此文件不上传到仓库。腾讯云构建不需要这份配置。
+</details>
+
+## 本机运行
+
+需要 Node.js **22.13+**。首次克隆后：
 
 ```sh
+git clone https://github.com/liuxyun-eng/gongyan.git
+cd gongyan
+npm ci
 mkdir -p .openai
 cp -n hosting.example.json .openai/hosting.json
-```
-
-```sh
-npm ci
-npm run share
-```
-
-工作区 `http://127.0.0.1:5173/`，上传入口 `http://127.0.0.1:6062/`。Ctrl-C 一起停止两个进程。也可单独启动上传助手：
-
-```sh
-node integrations/codex/upload-panel.mjs --port 6062 --workspace /完整/成果目录
-```
-
-助手只支持 `--port`、`--workspace`、`--site` 三个参数。默认工作区为 `http://127.0.0.1:5173/`；其他本机端口通过 `--site` 指定。网页填写的目录是此次上传范围。独立安装 `gongyan-upload-skill.zip` 时在技能目录执行 `npm install`。
-
-首次空数据库先构建并依次应用迁移；已应用的历史迁移不要修改或重复执行：
-
-```sh
 npm run build
-node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_shiny_mesmero.sql
-node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0001_overjoyed_starfox.sql
-node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0002_unique_pixie.sql
 ```
 
-迁移中旧表仅为历史兼容保留，应用不再访问旧的连接及游标表。原有对话和附件保留。
+首次空数据库需要依次应用三份迁移，再启动 `npm run share`；完整命令见[开发指南](docs/DEVELOPMENT.md#启动)。已有本机配置与数据库请保留，不要覆盖或重复迁移。
 
-## 验证与示例
+运行后，工作区在 `http://127.0.0.1:5173/`，本机目录上传助手在 `http://127.0.0.1:6062/`。跨电脑使用需要部署后端、数据库和文件存储，仅部署静态页面无法提供这些功能。
+
+## 技术与验证
+
+React 19 · TypeScript · Tailwind CSS · Streamdown · Shiki · KaTeX · Mermaid。腾讯云版本使用同源 API、PostgreSQL 与私有对象存储；本机开发版本使用 Wrangler / D1。
 
 ```sh
-node node_modules/typescript/bin/tsc --noEmit
+npx tsc --noEmit --incremental false
 node --test tests/markdown-import.test.mjs tests/markdown-math.test.mjs tests/shared-transcript.test.mjs
-node tests/dev-upload.integration.mjs
-node scripts/seed-markdown-demo.mjs
-node scripts/seed-codex-export-demo.mjs
+npm run build:tencent
+node scripts/build-tencent-server.mjs
 ```
 
-开发集成测试使用“大文件上传回归 · 合成示例”工作区及临时目录，验证完整目录、子目录同名文件、空文件、传输失败、冻结重试、丢失发布回执、原字节下载、成员权限和逐段删除。示例脚本只创建合成科研资料，位于 `work/markdown-demo/`。
+上传与权限验证脚本见 `tests/` 和 `tencent/`。测试资料由脚本合成，不能用真实用户数据替代示例。故障重试、文件校验和删除行为详见[开发指南](docs/DEVELOPMENT.md)。
 
-生产 worker 集成测试使用模拟平台身份头，仅可运行于本机隔离测试实例：`GONGYAN_TEST_URL=http://127.0.0.1:8792 node tests/markdown-share.integration.mjs`。验证上传、逐段删除、整条删除的发布者权限、版本冲突、文件保留与旧请求不能重新发布已删除对话。正式身份仍由平台入口验证，上传沿用浏览器登录和工作区成员权限。
+## 当前边界与后续方向
 
-## 结构
+当前每次最多 **500 个文件**、单文件 **20 MB**、目录总量 **200 MB**；Markdown 最多 400 KB、200 条消息。对话列表显示最近 100 条，文件列表显示最近 5,000 个文件，尚未实现历史分页和临时文件自动清理。
 
-- `integrations/codex/markdown-panel.html`、`upload-panel.mjs`：本机上传页面、冻结提交和失败重试。
-- `integrations/codex/markdown-files.mjs`：完整目录扫描和文件完整性检查。
-- `lib/markdown-share.ts`：逐文件持久化校验、完整清单确认与幂等发布。
-- `lib/shared-transcript.mjs`：已有导出还原及删除后的 Markdown 生成。
-- `components/shared-conversations.tsx`：只读共享页、复制、逐段删除与卡片右键删除。
-- `components/markdown-body.tsx`：代码、公式、表格与附件展示。
-- `app/api/[...path]/route.ts`：成员权限、删除版本校验和文件下载。
-- `db/schema.ts`、`drizzle/`：数据库结构与不可变迁移。
+本版提供只读共享快照，尚未实现后台实时同步、多人编辑或模型调用。Markdown 导出缺少角色或上下文时，展示无法完全复原原客户端。体验地址使用腾讯云测试域名，可能显示平台提示；正式推广还需要自有域名及运营准备。
 
-## 当前范围
+接下来优先改进首次分享体验、导入兼容性、上传恢复与历史检索。这些是开发方向，尚未完成。
 
-现在可以通过腾讯云网址跨电脑协作；localhost 地址仍仅用于本机开发。现在不支持后台自动上传、文件协同编辑、模型路由、token 共享或计费。对话列表显示最近 100 条，文件列表显示最近 5,000 个文件；尚无历史分页及文件自动清理。腾讯云部署、上传协议和验收记录见 [tencent/README.md](tencent/README.md)。
+## 参与与反馈
+
+欢迎在 [Issues](https://github.com/liuxyun-eng/gongyan/issues) 描述你的团队场景、遇到的问题或建议。复现时请提供脱敏后的最小示例、浏览器版本与操作步骤，不要贴真实研究资料或密钥。提交代码前请阅读[贡献指南](CONTRIBUTING.md)。
+
+如果共研帮你省下了解释 AI 工作过程的时间，欢迎 Star，或把仓库分享给正在一起做项目的伙伴。
+
+## English overview
+
+**Gongyan is a lightweight workspace for sharing AI conversations and project files with research and student teams.** Keep working in Codex, export a conversation as Markdown, and upload it alongside a selected project directory. Teammates can review the conversation and download the files in one place.
+
+This early preview includes account login, workspace invitations, Markdown rendering and verified directory uploads. It shares manually published snapshots; real-time synchronization and collaborative editing are not implemented. No model API key is needed to import or read conversations. All repository examples and screenshots contain synthetic data. Gongyan is an independent project, not an official OpenAI product.

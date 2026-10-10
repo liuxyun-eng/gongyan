@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>共研 · 上传 Markdown 与工作目录</title>
+    <style>
+      :root {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+          sans-serif;
+        color: #292929;
+        background: #fafafa;
+        font-size: 16px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+      button,
+      a,
+      input,
+      textarea,
+      summary {
+        outline-offset: 4px;
+      }
+      button {
+        cursor: pointer;
+        border: 0;
+        border-radius: 8px;
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      a {
+        color: inherit;
+      }
+      header {
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        border-bottom: 1px solid #e7e7e7;
+      }
+      header strong {
+        font-size: 16px;
+      }
+      header a {
+        font-size: 14px;
+        color: #747474;
+        text-decoration: none;
+      }
+      main {
+        max-width: 740px;
+        margin: auto;
+        padding: 30px 24px;
+      }
+      h1 {
+        font-size: 23px;
+        font-weight: 600;
+        letter-spacing: -0.6px;
+        margin: 0 0 10px;
+      }
+      .description {
+        font-size: 14px;
+        line-height: 1.8;
+        color: #777;
+        margin: 0 0 22px;
+      }
+      .project {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: #666;
+        margin: 0 0 20px;
+      }
+      .project select {
+        flex: 1;
+        max-width: 100%;
+        border: 1px solid #dedede;
+        border-radius: 6px;
+        padding: 8px 10px;
+        background: white;
+        color: #333;
+      }
+      .project span {
+        overflow-wrap: anywhere;
+      }
+      label {
+        font-size: 14px;
+      }
+      #markdown {
+        display: block;
+        width: 100%;
+        min-height: 180px;
+        resize: vertical;
+        border: 1px solid #dedede;
+        border-radius: 9px;
+        background: white;
+        padding: 15px;
+        font:
+          14px/1.75 "SFMono-Regular",
+          Menlo,
+          Consolas,
+          "PingFang SC",
+          monospace;
+        margin-top: 9px;
+      }
+      #markdown::placeholder {
+        color: #a1a1a1;
+      }
+      .import-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 12px 0;
+        color: #868686;
+        font-size: 13px;
+      }
+      .text-button {
+        font-size: 14px;
+        background: transparent;
+        color: #666;
+        padding: 0;
+      }
+      .text-button:hover {
+        color: #222;
+      }
+      details {
+        margin: 18px 0;
+        font-size: 14px;
+        color: #666;
+      }
+      summary {
+        cursor: pointer;
+      }
+      details label {
+        display: block;
+        margin: 12px 0 7px;
+      }
+      #root {
+        width: 100%;
+        padding: 9px 11px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 13px;
+        font-family: monospace;
+      }
+      details p {
+        font-size: 13px;
+        line-height: 1.8;
+        margin: 8px 0;
+      }
+      #preview {
+        border-top: 1px solid #e5e5e5;
+        padding-top: 20px;
+        margin-top: 20px;
+      }
+      #preview h2 {
+        font-size: 16px;
+        margin: 0 0 8px;
+        line-height: 1.6;
+      }
+      #count,
+      #no-files {
+        color: #777;
+        font-size: 14px;
+        line-height: 1.7;
+        margin: 0 0 12px;
+      }
+      .file {
+        display: flex;
+        align-items: flex-start;
+        gap: 11px;
+        padding: 12px 0;
+        border-bottom: 1px solid #e9e9e9;
+        cursor: pointer;
+      }
+      .file input {
+        margin-top: 5px;
+        accent-color: #333;
+      }
+      .file strong {
+        font-size: 14px;
+        font-weight: 500;
+        overflow-wrap: anywhere;
+      }
+      .file small {
+        display: block;
+        font-size: 12px;
+        color: #888;
+        line-height: 1.7;
+        overflow-wrap: anywhere;
+        margin-top: 2px;
+      }
+      .file.blocked {
+        color: #888;
+        cursor: default;
+      }
+      .manual-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 15px 0;
+        font-size: 13px;
+        color: #888;
+      }
+      #publish {
+        width: 100%;
+        min-height: 44px;
+        padding: 11px;
+        background: #292929;
+        color: white;
+        font-size: 14px;
+        margin-top: 17px;
+      }
+      #publish:hover:not(:disabled) {
+        background: #444;
+      }
+      #activity,
+      #error,
+      #success {
+        font-size: 14px;
+        line-height: 1.8;
+        overflow-wrap: anywhere;
+        margin: 12px 0;
+      }
+      #error {
+        color: #a54c3d;
+      }
+      #success {
+        padding: 16px;
+        background: #f0f5f0;
+        border-radius: 8px;
+      }
+      #success a {
+        display: inline-block;
+        font-weight: 500;
+        margin-top: 6px;
+      }
+      .hidden,
+      [hidden] {
+        display: none !important;
+      }
+      #role-note {
+        font-size: 13px;
+        color: #8b663e;
+        line-height: 1.8;
+      }
+      #activity:empty,
+      #error:empty {
+        display: none;
+      }
+      .limits {
+        font-size: 12px;
+        color: #888;
+        text-align: center;
+        line-height: 1.7;
+        margin: 9px 0 0;
+      }
+      @media (max-width: 420px) {
+        main {
+          padding: 24px 18px;
+        }
+        header {
+          padding: 0 18px;
+        }
+        #markdown {
+          min-height: 160px;
+        }
+        h1 {
+          font-size: 21px;
+        }
+        .import-row {
+          font-size: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>共研</strong
+      ><a id="workspace" hidden target="_blank" rel="noopener noreferrer"
+        >打开工作区</a
+      >
+    </header>
+    <main>
+      <h1>分享对话与文件</h1>
+      <p class="description">
+        上传 Markdown，填写工作目录。目录中的成果文件一起分享。
+      </p>
+      <div id="project" class="project" hidden>
+        <label for="project-id">分享到</label
+        ><select id="project-id"></select>
+      </div>
+      <section id="sign-in" hidden>
+        <p class="description" id="sign-in-note"></p>
+        <a id="login" target="_blank" rel="noopener noreferrer"
+          >打开共研工作区</a
+        >
+        <button class="text-button" id="refresh-status">
+          已登录，刷新工作区
+        </button>
+      </section>
+      <section id="editor">
+        <label for="markdown">Codex 对话 · Markdown</label>
+        <textarea
+          id="markdown"
+          placeholder="粘贴 Codex「复制为 Markdown」的对话，自动还原问题、回答和折叠记录。也支持 ## User / ## Assistant。"
+        ></textarea>
+        <div class="import-row">
+          <button class="text-button" id="import-md">选择 .md 文件</button
+          ><span>仅解析你粘贴的内容</span>
+        </div>
+        <input
+          id="md-file"
+          type="file"
+          accept=".md,.markdown,.txt,text/markdown,text/plain"
+          hidden
+        />
+        <details open>
+          <summary>工作目录</summary>
+          <label for="root">本机文件夹路径</label
+          ><input id="root" autocomplete="off" placeholder="例如 /Users/你的名字/Documents/项目/outputs" />
+          <p>
+            读取此目录及子目录中的成果文件，保留目录结构。全部文件校验通过后才完成分享。
+          </p>
+        </details>
+        <button class="text-button" id="refresh-files">重新读取目录</button>
+        <div id="preview" hidden>
+          <h2 id="title"></h2>
+          <p id="count"></p>
+          <p id="role-note" hidden>
+            未找到角色标记，将按一段 Codex 回答展示。原始 Markdown 会保留。
+          </p>
+          <div id="file-list"></div>
+          <p id="no-files" hidden>工作目录为空，此次只分享对话。</p>
+          <p id="missing-note" class="description" hidden></p>
+          <details id="skipped-details" hidden><summary id="skipped-count"></summary><p id="skipped-list"></p></details>
+        </div>
+        <p id="activity" aria-live="polite"></p>
+        <button id="publish" disabled>粘贴对话后分享</button>
+        <p class="limits">最多 500 个文件 · 单文件 20 MB · 目录总量 200 MB<br>分享后，成员可阅读对话并下载目录文件。</p>
+      </section>
+      <p id="error" role="alert"></p>
+      <div id="success" hidden></div>
+    </main>
+    <script nonce="__PANEL_NONCE__">
+      const $ = (id) => document.getElementById(id);
+      const nonce = document.currentScript.nonce;
+      let preview,
+        timer,
+        generation = 0,
+        busy = false,
+        pendingPayload,
+        status;
+      async function api(path, body) {
+        const response = await fetch(path, {
+          method: body ? "POST" : "GET",
+          headers: {
+            "x-gongyan-panel": nonce,
+            ...(body && !(body instanceof FormData)
+              ? { "Content-Type": "application/json" }
+              : {}),
+          },
+          body:
+            body instanceof FormData
+              ? body
+              : body
+                ? JSON.stringify(body)
+                : undefined,
+        });
+        const result = await response.json();
+        if (!response.ok)
+          throw Object.assign(new Error(result.error || "操作失败，请重试。"), {
+            repreview: result.repreview,
+          });
+        return result;
+      }
+      function formatSize(bytes) {
+        return bytes >= 1024 * 1024
+          ? (bytes / (1024 * 1024)).toFixed(1) + " MB"
+          : Math.ceil(bytes / 1024) + " KB";
+      }
+      function updateButton() {
+        const count = preview?.files.length || 0;
+        $("publish").disabled = busy || !preview || !$("project-id").value;
+        $("publish").textContent = pendingPayload ? "重试分享" : preview ? "分享对话" + (count ? "与全部 " + count + " 个文件" : "") : "上传 Markdown 并填写工作目录";
+      }
+      function invalidate() {
+        if (pendingPayload) return;
+        generation++;
+        preview = undefined;
+        $("preview").hidden = true;
+        $("success").hidden = true;
+        $("error").textContent = "";
+        updateButton();
+        clearTimeout(timer);
+        if ($("markdown").value.trim() && $("root").value.trim())
+          timer = setTimeout(() => void scan(), 450);
+      }
+      async function scan() {
+        const thisGeneration = ++generation;
+        clearTimeout(timer);
+        $("error").textContent = "";
+        $("activity").textContent = "正在读取对话和工作目录…";
+        preview = undefined;
+        updateButton();
+        try {
+          const result = await api("/markdown/preview", {
+            markdown: $("markdown").value,
+            root: $("root").value,
+            projectId: $("project-id").value,
+          });
+          if (thisGeneration !== generation) return;
+          preview = result;
+          $("title").textContent = result.title;
+          $("count").textContent =
+            result.messageCount +
+            " 条消息 · " +
+            result.files.filter((file) => file.status === "ready").length +
+            " 个目录文件 · " + formatSize(result.total) +
+            (result.format === "codex" ? " · Codex 导出" : "");
+          $("role-note").hidden = result.hasRoles;
+          $("file-list").replaceChildren();
+          for (const file of result.files) {
+            const label = document.createElement("label");
+            label.className =
+              "file" + (file.status === "ready" ? "" : " blocked");
+            const check = document.createElement("input");
+            check.type = "checkbox";
+            check.dataset.file = file.id;
+            check.checked = file.selected;
+            check.disabled = true;
+            check.setAttribute("aria-label", file.name + "，将一并上传");
+            const content = document.createElement("div"),
+              name = document.createElement("strong"),
+              detail = document.createElement("small");
+            name.textContent = file.name;
+            detail.textContent =
+              file.status === "ready"
+                ? formatSize(file.size) + " · " + file.reference
+                : file.detail + " · " + file.reference;
+            content.append(name, detail);
+            label.append(check, content);
+            $("file-list").append(label);
+          }
+          $("no-files").hidden = result.files.length !== 0;
+          $("skipped-details").hidden = !result.skipped?.length;
+          $("skipped-count").textContent = "已排除 " + (result.skipped?.length || 0) + " 项凭证、系统文件或依赖目录";
+          $("skipped-list").textContent = (result.skipped || []).map(f => f.name).join("、");
+          $("missing-note").hidden = !result.missingReferences?.length;
+          $("missing-note").textContent = "Markdown 中还有 " + (result.missingReferences?.length || 0) + " 处引用未在此目录找到；该目录中的文件仍会全部上传。";
+          $("preview").hidden = false;
+          $("activity").textContent = "";
+          updateButton();
+        } catch (error) {
+          if (thisGeneration !== generation) return;
+          $("error").textContent = error.message;
+          $("activity").textContent = "";
+        }
+      }
+      function lock(value) {
+        busy = value;
+        for (const id of ["markdown", "root", "import-md", "project-id", "refresh-files"]) $(id).disabled = value || !!pendingPayload;
+        updateButton();
+      }
+      $("refresh-files").onclick = () => void scan();
+      $("markdown").addEventListener("input", invalidate);
+      $("root").addEventListener("input", invalidate);
+      $("project-id").addEventListener("change", () => {
+        updateWorkspaceLink();
+        invalidate();
+      });
+      $("import-md").onclick = () => $("md-file").click();
+      $("md-file").onchange = async () => {
+        const file = $("md-file").files[0];
+        if (!file) return;
+        try {
+          if (file.size > 400_000) throw new Error("Markdown 最多 400 KB。");
+          $("markdown").value = await file.text();
+          invalidate();
+        } catch (error) {
+          $("error").textContent = error.message;
+        }
+        $("md-file").value = "";
+      };
+      $("publish").onclick = async () => {
+        if (busy || !preview) return;
+        $("error").textContent = "";
+        if (!pendingPayload) {
+          pendingPayload = { snapshotId: preview.snapshotId };
+        }
+        lock(true);
+        $("activity").textContent = "正在冻结目录文件并上传…";
+        const progressTimer = setInterval(async () => {
+          try {
+            const p = await api("/markdown/progress?snapshotId=" + encodeURIComponent(pendingPayload?.snapshotId || ""));
+            if (busy) $("activity").textContent = "已校验 " + p.completed + "/" + p.total + " 个文件" + (p.current ? " · " + p.current : "");
+          } catch {}
+        }, 1000);
+        try {
+          const result = await api("/markdown/upload", pendingPayload);
+          const success = $("success");
+          success.replaceChildren();
+          const message = document.createElement("div");
+          message.textContent =
+            "已完整分享并校验 " +
+            result.messageCount +
+            " 条消息和 " +
+            result.files.length +
+            " 个文件。";
+          const link = document.createElement("a");
+          link.href =
+            result.siteUrl +
+            "/?project=" +
+            encodeURIComponent(result.projectId) +
+            "&post=" +
+            encodeURIComponent(result.postId);
+          link.textContent = "查看共享对话";
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          success.append(message, link);
+          success.hidden = false;
+          pendingPayload = undefined;
+          preview = undefined;
+          $("markdown").value = "";
+          $("preview").hidden = true;
+          $("activity").textContent = "";
+        } catch (error) {
+          $("error").textContent = error.message;
+          if (error.repreview) {
+            pendingPayload = undefined;
+            preview = undefined;
+            $("activity").textContent = "请重新读取文件后分享。";
+            invalidate();
+          } else $("activity").textContent = "文件和这次提交已保留，可以重试。";
+        } finally {
+          clearInterval(progressTimer);
+          lock(false);
+        }
+      };
+      function updateWorkspaceLink() {
+        if (status?.siteUrl)
+          $("workspace").href =
+            status.siteUrl +
+            "/?project=" +
+            encodeURIComponent($("project-id").value);
+      }
+      $("refresh-status").onclick = () => void initialize();
+      async function initialize() {
+        try {
+          status = await api("/status");
+          const selected =
+            $("project-id").value ||
+            new URLSearchParams(location.search).get("project") ||
+            "";
+          $("project-id").replaceChildren();
+          const placeholder = document.createElement("option");
+          placeholder.value = "";
+          placeholder.textContent = "选择工作区";
+          $("project-id").append(placeholder);
+          for (const project of status.projects || []) {
+            const option = document.createElement("option");
+            option.value = project.id;
+            option.textContent = project.name;
+            $("project-id").append(option);
+          }
+          $("project-id").value = (status.projects || []).some(
+            (p) => p.id === selected,
+          )
+            ? selected
+            : status.projects?.length === 1
+              ? status.projects[0].id
+              : "";
+          $("project").hidden = !status.projects?.length;
+          $("sign-in").hidden = status.signedIn && !!status.projects?.length;
+          $("sign-in-note").textContent =
+            status.error || "请先在共研建立或加入一个工作区，回来即可分享。";
+          $("login").href = status.siteUrl + "/";
+
+          $("workspace").hidden = !status.siteUrl;
+          updateWorkspaceLink();
+          $("error").textContent = "";
+          if ($("markdown").value.trim() && !pendingPayload) invalidate();
+          else updateButton();
+        } catch (error) {
+          $("error").textContent = error.message;
+        }
+      }
+      void initialize();
+    </script>
+  </body>
+</html>
