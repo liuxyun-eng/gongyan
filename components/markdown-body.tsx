@@ -9,6 +9,7 @@ import { cjk } from "@streamdown/cjk";
 import { FileText, Download, Image as ImageIcon, ChevronRight } from "lucide-react";
 import { normalizeMathDelimiters } from "@/lib/markdown-math.mjs";
 import { normalizeCodexFileCitations } from "@/lib/file-citations.mjs";
+import { attachmentFor } from "@/lib/file-reference.mjs";
 import {
   markdownSections,
   markdownMessageContext,
@@ -18,31 +19,6 @@ import {
 export type FileReference = { id: string; name: string; path: string };
 const math = createMathPlugin({ singleDollarTextMath: true });
 const plugins = { code, math, mermaid, cjk };
-function normalizePath(value: string) {
-  try {
-    value = decodeURIComponent(value);
-  } catch {
-    return value;
-  }
-  if (/^file:\/\//i.test(value)) {
-    try {
-      value = decodeURIComponent(new URL(value).pathname);
-    } catch {
-      return "";
-    }
-  }
-  return value
-    .replace(/(?:#L?\d+(?:-L?\d+)?|:\d+(?::\d+)?)$/, "")
-    .replace(/^\.\//, "");
-}
-function attachmentFor(url: string, references: FileReference[]) {
-  return references.find(
-    (file) =>
-      url === "/api/files/" + file.id ||
-      (file.path && normalizePath(url) === normalizePath(file.path)) ||
-      (!normalizePath(url).startsWith("/") && normalizePath(url) === normalizePath(file.name)),
-  );
-}
 // Map known local destinations before rehype normalizes relative URLs. All
 // unknown paths still become text; this does not grant filesystem access.
 function remarkAttachments({ references }: { references: FileReference[] }) {
@@ -154,9 +130,7 @@ export function ConversationMessageBody({
       {context.files.length > 0 && (
         <div className="codex-user-files">
           {context.files.map((item, index) => {
-            const file = references.find(
-              (file) => normalizePath(file.path) === normalizePath(item.path),
-            );
+            const file = attachmentFor(item.path, references);
             return file && item.kind === "image" ? (
               <a
                 className="codex-image-attachment"
